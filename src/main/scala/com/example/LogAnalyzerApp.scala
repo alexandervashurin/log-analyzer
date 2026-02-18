@@ -8,7 +8,7 @@ import java.nio.file.{Files, StandardCopyOption}
 
 object LogAnalyzerApp {
 
-  case class LogStats(
+  private case class LogStats(
     totalLines: Long,
     errorCount: Long,
     warningCount: Long,
@@ -87,7 +87,7 @@ object LogAnalyzerApp {
     println("✅ Server started at http://localhost:8080")
   }
 
-  def analyzeText(text: String): LogStats = {
+  private def analyzeText(text: String): LogStats = {
     val stream = new java.io.ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8))
     val reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))
     try {
@@ -97,7 +97,7 @@ object LogAnalyzerApp {
     }
   }
 
-  def analyzeFile(file: File): LogStats = {
+  private def analyzeFile(file: File): LogStats = {
     val reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))
     try {
       analyzeStream(reader)
@@ -106,7 +106,7 @@ object LogAnalyzerApp {
     }
   }
 
-  def analyzeStream(reader: BufferedReader): LogStats = {
+  private def analyzeStream(reader: BufferedReader): LogStats = {
     var totalLines = 0L
     var errorCount = 0L
     var warningCount = 0L
@@ -145,26 +145,26 @@ object LogAnalyzerApp {
   private val logPattern = """(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}[.,]?\d*)\s*\[?(\w+)\]?\s*(.*)""".r
   case class LogEntry(timestamp: String, level: String, message: String)
 
-  def parseLine(line: String): Option[LogEntry] = line.trim match {
+  private def parseLine(line: String): Option[LogEntry] = line.trim match {
     case logPattern(ts, lvl, msg) => Some(LogEntry(ts.trim, lvl.toUpperCase.trim, msg.trim))
     case _ if line.trim.nonEmpty => Some(LogEntry("", "UNKNOWN", line.trim))
     case _ => None
   }
 
-  def sendJson(ex: HttpExchange, code: Int, stats: LogStats): Unit = {
+  private def sendJson(ex: HttpExchange, code: Int, stats: LogStats): Unit = {
     val errorsJson = stats.topErrors.map { case (k, v) => s""""$k":$v""" }.mkString("{", ",", "}")
     val timeJson = stats.timeRange.map(t => s"""["${t._1}","${t._2}"]""").getOrElse("null")
     val json = s"""{"totalLines":${stats.totalLines},"errorCount":${stats.errorCount},"warningCount":${stats.warningCount},"infoCount":${stats.infoCount},"topErrors":$errorsJson,"timeRange":$timeJson}"""
     sendResponse(ex, code, json, "application/json")
   }
 
-  def sendJson(ex: HttpExchange, code: Int, map: Map[String, String]): Unit = {
+  private def sendJson(ex: HttpExchange, code: Int, map: Map[String, String]): Unit = {
     val json = map.map { case (k, v) => s""""$k":"$v"""" }.mkString("{", ",", "}")
     sendResponse(ex, code, json, "application/json")
   }
 
   // ИСПРАВЛЕННЫЙ МЕТОД - сначала конвертируем в байты, потом считаем длину
-  def sendResponse(ex: HttpExchange, code: Int, body: String, contentType: String): Unit = {
+  private def sendResponse(ex: HttpExchange, code: Int, body: String, contentType: String): Unit = {
     val bodyBytes = body.getBytes(StandardCharsets.UTF_8)
     ex.getResponseHeaders.set("Content-Type", contentType)
     ex.getResponseHeaders.set("Access-Control-Allow-Origin", "*")
